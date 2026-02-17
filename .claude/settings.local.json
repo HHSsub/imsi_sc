@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(ls:*)",
+      "Read(//c/Users/User/Downloads/sc_code/**)"
+    ]
+  }
+}

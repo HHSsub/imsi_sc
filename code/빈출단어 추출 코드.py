@@ -1,0 +1,69 @@
+import pandas as pd
+import os
+import re
+from collections import Counter
+
+# 1. 크림 관련 파일 로드 (제시된 파일 기준)
+cream_files = [
+    "16. 어성초 센텔라 레드 스팟 크림 30g.csv",
+    "22. 어성초 70 수딩 크림 50ml.csv",
+]
+
+all_cream_data = []
+for f in cream_files:
+    if os.path.exists(f):
+        df = pd.read_csv(f)
+        if '리뷰내용' in df.columns:
+            all_cream_data.append(df[['리뷰내용']].dropna())
+
+cream_df = pd.concat(all_cream_data, ignore_index=True)
+reviews = cream_df['리뷰내용'].astype(str).tolist()
+
+# 2. 제시된 10대 핵심 카테고리 및 상세 키워드 정의
+cream_categories = {
+    "트러블/여드름": ["좁쌀", "여드름", "흉터", "뒤집어", "트러블", "뾰루지", "흔적", "화농"],
+    "진정/회복": ["진정", "가라앉", "붉은기", "재생", "회복", "잠재워"],
+    "효과(전후)": ["효과", "개선", "확실히", "꾸준히", "비포", "애프터", "변화"],
+    "자극도": ["자극", "순함", "순해", "순한", "따갑", "안심", "예민", "민감"],
+    "수분/촉촉": ["수분", "촉촉", "쫀쫀", "물광", "수분감", "보들"],
+    "화장/데일리": ["화장", "메이크업", "아침", "자기 전", "듬뿍", "데일리", "밀리"],
+    "사용감(끈적/유분)": ["끈적", "산뜻", "유분", "기름", "번들", "오일리", "가벼운", "무거운"],
+    "보습/건조": ["보습", "속건조", "속당김", "건조", "당김", "보습력"],
+    "제형/발림성": ["제형", "발림", "부드럽", "꾸덕", "묽은", "질감", "밀착"],
+    "흡수력": ["흡수", "스며", "흡수력"]
+}
+
+# 3. 분석 로직: 카테고리별 '언급 리뷰 수'와 '상세 단어 빈도' 산출
+category_review_counts = Counter() 
+keyword_freq = {cat: Counter() for cat in cream_categories} 
+
+for review in reviews:
+    for cat, keywords in cream_categories.items():
+        matched_in_review = False
+        for kw in keywords:
+            count = review.count(kw)
+            if count > 0:
+                keyword_freq[cat][kw] += count
+                matched_in_review = True
+        
+        if matched_in_review:
+            category_review_counts[cat] += 1
+
+# 4. 결과 리포트 출력
+print("="*70)
+print("   [크림 제품군 10대 핵심 카테고리 상세 분석 리포트]")
+print("="*70)
+print(f"총 분석 리뷰 수: {len(reviews)}건\n")
+
+# 언급 비중이 높은 순서대로 출력
+sorted_cats = category_review_counts.most_common()
+
+for i, (cat, cat_count) in enumerate(sorted_cats, 1):
+    percentage = (cat_count / len(reviews)) * 100
+    print(f"{i}위. {cat}: 총 {cat_count}건의 리뷰에서 언급 ({percentage:.1f}%)")
+    
+    # 해당 카테고리 내 키워드별 빈도 (많이 나온 순)
+    words_sorted = keyword_freq[cat].most_common()
+    word_report = ", ".join([f"{word}({count}회)" for word, count in words_sorted])
+    print(f"    ㄴ 상세 단어 빈도: {word_report}")
+    print("-" * 70)
